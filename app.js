@@ -858,6 +858,7 @@ const els = {
 };
 const growthCalendarCells = new Map();
 let activeGrowthDate = null;
+let treeCalendarHideTimer = 0;
 
 function setGrowthCalendarDay(date) {
   if (date === activeGrowthDate) return;
@@ -964,7 +965,6 @@ function updateCalendarPalette() {
 function updateCalendarControls() {
   const hasCalendar = state.user && state.calendarDays.length > 0;
   const showTreeCalendar = Boolean(hasCalendar && (EMBED ? state.embedCalendarOpen : state.calendarOpen));
-  app.classList.toggle('embed-calendar-open', showTreeCalendar);
   els.calendarToggle.disabled = !hasCalendar;
   els.embedCalendarToggle.disabled = !hasCalendar;
   els.calendarToggle.setAttribute('aria-expanded', String(showTreeCalendar));
@@ -978,7 +978,28 @@ function updateCalendarControls() {
     ? embedCalendarLabel
     : 'Load a GitHub profile with contribution calendar data to view it';
   els.calendarPanel.hidden = !showTreeCalendar;
-  els.treeCalendar.hidden = !showTreeCalendar;
+  clearTimeout(treeCalendarHideTimer);
+  if (!hasCalendar) {
+    app.classList.remove('embed-calendar-open');
+    els.treeCalendar.hidden = true;
+    els.treeCalendar.setAttribute('aria-hidden', 'true');
+  } else if (showTreeCalendar) {
+    els.treeCalendar.hidden = false;
+    els.treeCalendar.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => {
+      if (EMBED ? state.embedCalendarOpen : state.calendarOpen) {
+        app.classList.add('embed-calendar-open');
+      }
+    });
+  } else {
+    app.classList.remove('embed-calendar-open');
+    els.treeCalendar.setAttribute('aria-hidden', 'true');
+    treeCalendarHideTimer = setTimeout(() => {
+      if (!(EMBED ? state.embedCalendarOpen : state.calendarOpen)) {
+        els.treeCalendar.hidden = true;
+      }
+    }, 240);
+  }
   els.calendarHint.hidden = Boolean(hasCalendar);
   els.calendarHint.textContent = state.user
     ? 'Daily contributions are unavailable. Try loading this profile again.'

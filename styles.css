@@ -237,21 +237,22 @@
   .calendar-day[data-growth-active="true"] { position: relative; z-index: 1; outline: 2px solid var(--ink); outline-offset: 1px; transform: scale(1.35); }
   .calendar-legend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; color: var(--muted); font-size: 11px; }
   .calendar-legend .calendar-day { display: inline-block; flex: none; }
-  .tree-calendar { position: absolute; z-index: 3; left: 50%; bottom: 14px; width: min(460px, calc(100% - 24px)); flex-direction: column; padding: 9px 10px 6px; transform: translateX(-50%); border: 1px solid color-mix(in srgb, var(--line) 75%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--panel) 94%, transparent); color: var(--ink); box-shadow: 0 8px 24px #14271d28; backdrop-filter: blur(12px); }
+  .tree-calendar { position: absolute; z-index: 3; left: 50%; bottom: 14px; width: min(620px, calc(100% - 32px)); flex-direction: column; padding: 13px 15px 9px; transform: translate(-50%, 12px); border: 1px solid color-mix(in srgb, var(--line) 75%, transparent); border-radius: 14px; background: color-mix(in srgb, var(--panel) 94%, transparent); color: var(--ink); box-shadow: 0 8px 24px #14271d28; backdrop-filter: blur(12px); opacity: 0; pointer-events: none; transition: opacity 220ms ease, transform 220ms ease; }
   .tree-calendar[hidden] { display: none; }
+  .tree-calendar:not([hidden]) { display: flex; }
   .xp-flow { position: absolute; z-index: 2; inset: 0; overflow: hidden; pointer-events: none; }
   .xp-flow[hidden] { display: none; }
-  .xp-orb { position: absolute; width: 8px; height: 8px; margin: -4px; border-radius: 50%; background: #ffe38a; box-shadow: 0 0 10px 3px #ffd36b99, 0 0 22px 5px #fff2d655; will-change: transform; }
+  .xp-orb { position: absolute; width: 8px; height: 8px; margin: -4px; border-radius: 50%; background: var(--leaf-accent); box-shadow: 0 0 10px 3px var(--leaf-accent), 0 0 22px 5px #fff2d655; will-change: transform; }
   .tree-calendar-heading { display: flex; flex-wrap: nowrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 0; }
-  .tree-calendar-heading strong { flex: none; font: 600 10px/1.3 var(--font-body); }
-  .tree-calendar .calendar-summary { overflow: hidden; font-size: 9px; line-height: 1.3; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
-  .tree-calendar .calendar-scroll { width: 100%; min-width: 0; padding: 3px 1px 5px; }
-  .tree-calendar .calendar-grid { gap: 2px; }
-  .tree-calendar .calendar-week { grid-template-rows: 11px repeat(7, 6px); gap: 2px; }
-  .tree-calendar .calendar-month { font-size: 7px; line-height: 10px; }
-  .tree-calendar .calendar-day { width: 6px; height: 6px; border: 0; border-radius: 1.5px; }
-  .tree-calendar .calendar-legend { gap: 3px; font-size: 8px; line-height: 1; }
-  .tree-calendar .calendar-legend .calendar-day { width: 6px; height: 6px; }
+  .tree-calendar-heading strong { flex: none; font: 600 12px/1.4 var(--font-body); }
+  .tree-calendar .calendar-summary { overflow: hidden; font-size: 11px; line-height: 1.4; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+  .tree-calendar .calendar-scroll { width: 100%; min-width: 0; padding: 5px 1px 7px; }
+  .tree-calendar .calendar-grid { gap: 3px; }
+  .tree-calendar .calendar-week { grid-template-rows: 13px repeat(7, 8px); gap: 2px; }
+  .tree-calendar .calendar-month { font-size: 8px; line-height: 12px; }
+  .tree-calendar .calendar-day { width: 8px; height: 8px; border: 0; border-radius: 2px; }
+  .tree-calendar .calendar-legend { gap: 4px; font-size: 9px; line-height: 1.2; }
+  .tree-calendar .calendar-legend .calendar-day { width: 8px; height: 8px; }
   .qr-preview { display: block; width: min(100%, 240px); height: auto; margin: 0 auto; padding: 8px; border-radius: 12px; background: #fff; image-rendering: pixelated; }
   .qr-preview[hidden], #downloadQr[hidden] { display: none; }
 
@@ -270,8 +271,9 @@
   .embed .embed-calendar-toggle:disabled { cursor: not-allowed; opacity: 0.55; }
   .embed .embed-calendar-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .embed .embed-calendar-toggle[aria-expanded="true"] { border-color: var(--leaf-accent); background: color-mix(in srgb, var(--leaf-accent) 12%, var(--panel)); color: var(--leaf-accent); }
-  .embed .tree-calendar { display: none; }
-  .embed .app.embed-calendar-open .tree-calendar:not([hidden]) { display: flex; }
+  .embed .tree-calendar:not([hidden]) { display: flex; }
+  .embed .tree-calendar[hidden] { display: none; }
+  .app.embed-calendar-open .tree-calendar:not([hidden]) { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
   .embed .layout { display: block; }
   .embed .stage { border: 0; border-radius: 0; background: transparent; height: 100dvh; min-height: 0; }
 
@@ -291,16 +293,18 @@
     .sidebar-toggle { width: 42px; height: 42px; min-height: 42px; padding: 7px; }
     .stage { flex-basis: 44%; }
     .count strong { font-size: 32px; }
-    .tree-calendar { bottom: 8px; width: calc(100% - 20px); padding: 8px 8px 5px; border-radius: 11px; }
-    .tree-calendar-heading { gap: 6px; }
-    .tree-calendar-heading strong { font-size: 9px; }
-    .tree-calendar .calendar-summary { font-size: 8px; }
-    .tree-calendar .calendar-scroll { padding-top: 3px; padding-bottom: 5px; }
-    .tree-calendar .calendar-week { grid-template-rows: 10px repeat(7, 6px); gap: 2px; }
-    .tree-calendar .calendar-month { font-size: 7px; line-height: 9px; }
-    .tree-calendar .calendar-legend { display: none; }
+    .tree-calendar { bottom: 8px; width: calc(100% - 20px); padding: 10px 10px 7px; border-radius: 12px; }
+    .tree-calendar-heading { gap: 5px 8px; }
+    .tree-calendar-heading strong { font-size: 10px; }
+    .tree-calendar .calendar-summary { font-size: 9px; }
+    .tree-calendar .calendar-scroll { padding-top: 4px; padding-bottom: 6px; }
+    .tree-calendar .calendar-week { grid-template-rows: 11px repeat(7, 7px); gap: 2px; }
+    .tree-calendar .calendar-month { font-size: 7px; line-height: 10px; }
+    .tree-calendar .calendar-day, .tree-calendar .calendar-legend .calendar-day { width: 7px; height: 7px; }
+    .tree-calendar .calendar-legend { display: flex; font-size: 8px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .welcome-mark, .welcome-eyebrow, .welcome-screen h1 { animation: none; }
     .welcome-screen, .app { transition-duration: 150ms; }
+    .tree-calendar { transition: none; transform: translate(-50%, 0); }
   }
