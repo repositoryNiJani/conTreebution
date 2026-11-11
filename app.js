@@ -92,15 +92,39 @@ const leafHex = () => state.customLeaf || SPECIES[state.species].leaf;
 const app = $('#app');
 const sidebarToggle = $('#sidebarToggle');
 const settingsPanel = $('#settingsPanel');
+const layout = $('.layout');
+let sidebarResizeTimer;
+
+function finishSidebarResize() {
+  clearTimeout(sidebarResizeTimer);
+  if (!sidebarTransitioning) return;
+  sidebarTransitioning = false;
+  requestAnimationFrame(() => {
+    resize();
+    requestAnimationFrame(() => app.classList.remove('sidebar-resizing'));
+  });
+}
+
+let sidebarTransitioning = false;
+layout.addEventListener('transitionend', (event) => {
+  if (event.target === layout && event.propertyName === 'grid-template-columns') finishSidebarResize();
+});
+settingsPanel.addEventListener('transitionend', (event) => {
+  if (event.target === settingsPanel && ['flex-basis', 'flex-grow'].includes(event.propertyName)) finishSidebarResize();
+});
 
 sidebarToggle.addEventListener('click', () => {
+  sidebarTransitioning = !reduceMotion;
+  app.classList.toggle('sidebar-resizing', sidebarTransitioning);
+  clearTimeout(sidebarResizeTimer);
+  if (sidebarTransitioning) sidebarResizeTimer = setTimeout(finishSidebarResize, 400);
   const collapsed = app.classList.toggle('sidebar-collapsed');
   const label = collapsed ? 'Show controls' : 'Hide controls';
   sidebarToggle.setAttribute('aria-expanded', String(!collapsed));
   sidebarToggle.setAttribute('aria-label', label);
   sidebarToggle.title = label;
   if (!collapsed) settingsPanel.scrollTop = 0;
-  requestAnimationFrame(resize);
+  if (!sidebarTransitioning) requestAnimationFrame(resize);
 });
 
 /* ------------------------------------------------------------------ */
@@ -159,7 +183,7 @@ const grassGeo = (() => {
   crossed.dispose();
   return geometry;
 })();
-const GRASS_COUNT = 110;
+const GRASS_COUNT = 190;
 const grassMesh = new THREE.InstancedMesh(grassGeo, grassMat, GRASS_COUNT);
 grassMesh.frustumCulled = false;
 grassMesh.castShadow = false;
@@ -189,6 +213,7 @@ for (let i = 0; i < GRASS_COUNT; i++) {
   grassColor.set(grassPalette[Math.floor(grassRng() * grassPalette.length)]);
   grassMesh.setColorAt(i, grassColor);
 }
+grassMesh.count = 0;
 scene.add(grassMesh);
 
 const growthProgress = { value: 1 };
@@ -315,6 +340,122 @@ function makeLeafGeometry(shape) {
   return leafGeometries[shape].clone();
 }
 
+const groundLeaves = new THREE.InstancedMesh(
+  leafGeo,
+  new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 1, side: THREE.DoubleSide }),
+  220
+);
+groundLeaves.frustumCulled = false;
+groundLeaves.count = 0;
+scene.add(groundLeaves);
+
+const flowerPetals = new THREE.InstancedMesh(
+  new THREE.CircleGeometry(0.035, 8),
+  new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 1, side: THREE.DoubleSide }),
+  220
+);
+flowerPetals.frustumCulled = false;
+flowerPetals.count = 0;
+scene.add(flowerPetals);
+const flowerCenters = new THREE.InstancedMesh(
+  new THREE.SphereGeometry(0.018, 8, 6),
+  new THREE.MeshStandardMaterial({ color: '#f5c84b', roughness: 1 }),
+  44
+);
+flowerCenters.frustumCulled = false;
+flowerCenters.count = 0;
+scene.add(flowerCenters);
+const flowerStems = new THREE.InstancedMesh(
+  new THREE.CylinderGeometry(0.008, 0.012, 1, 6),
+  new THREE.MeshStandardMaterial({ color: '#648c45', roughness: 1 }),
+  44
+);
+flowerStems.frustumCulled = false;
+flowerStems.count = 0;
+scene.add(flowerStems);
+const decorDummy = new THREE.Object3D();
+
+function updateSeasonalGround(seasonKey) {
+  const groundDecorRng = mulberry32(0x5ea50a);
+  const palettes = {
+    spring: { grass: ['#78a85d', '#8dbb69', '#a8c978'], grassCount: 175 },
+    summer: { grass: ['#568d45', '#70a64f', '#91b65a'], grassCount: 190 },
+    fall: { grass: ['#b2a34f', '#c48b3a', '#d2ad54'], grassCount: 105 },
+    winter: { grass: ['#b9c5bd', '#d1d8d1', '#a8b7b1'], grassCount: 18 }
+  };
+  const palette = palettes[seasonKey];
+  const fallColors = ['#d87532', '#c64b2d', '#e3ad3d', '#a9482c'];
+  grassMesh.count = palette.grassCount;
+  for (let i = 0; i < grassBlades.length; i++) {
+    const blade = grassBlades[i];
+    const scale = seasonKey === 'winter' ? 0.42 : seasonKey === 'fall' ? 0.8 : 1;
+    decorDummy.position.set(blade.x, 0.015, blade.z);
+    decorDummy.rotation.set(0, blade.yaw, 0);
+    decorDummy.scale.set(blade.width * scale, blade.height * scale, blade.width * scale);
+    decorDummy.updateMatrix();
+    grassMesh.setMatrixAt(i, decorDummy.matrix);
+    grassColor.set(palette.grass[Math.floor(groundDecorRng() * palette.grass.length)]);
+    grassMesh.setColorAt(i, grassColor);
+  }
+  grassMesh.instanceMatrix.needsUpdate = true;
+  if (grassMesh.instanceColor) grassMesh.instanceColor.needsUpdate = true;
+
+  groundLeaves.count = seasonKey === 'fall' ? 220 : 0;
+  for (let i = 0; i < groundLeaves.count; i++) {
+    const angle = groundDecorRng() * Math.PI * 2;
+    const radius = 1.8 + groundDecorRng() * 4.8;
+    decorDummy.position.set(Math.cos(angle) * radius, 0.035 + groundDecorRng() * 0.01, Math.sin(angle) * radius);
+    decorDummy.rotation.set(-Math.PI / 2 + (groundDecorRng() - 0.5) * 0.18, groundDecorRng() * Math.PI * 2, (groundDecorRng() - 0.5) * 0.25);
+    decorDummy.scale.setScalar(0.1 + groundDecorRng() * 0.09);
+    decorDummy.updateMatrix();
+    groundLeaves.setMatrixAt(i, decorDummy.matrix);
+    grassColor.set(fallColors[Math.floor(groundDecorRng() * fallColors.length)]);
+    groundLeaves.setColorAt(i, grassColor);
+  }
+  groundLeaves.instanceMatrix.needsUpdate = true;
+  if (groundLeaves.instanceColor) groundLeaves.instanceColor.needsUpdate = true;
+
+  const flowerCount = seasonKey === 'spring' ? 36 : 0;
+  flowerPetals.count = flowerCount * 5;
+  flowerCenters.count = flowerCount;
+  flowerStems.count = 0;
+  const flowerColors = ['#f28a9b', '#ffd166', '#b795d4', '#fff4da'];
+  for (let i = 0; i < flowerCount; i++) {
+    const angle = groundDecorRng() * Math.PI * 2;
+    const radius = 2 + groundDecorRng() * 4.3;
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+    const tall = i % 3 === 0;
+    const bloomHeight = tall ? 0.28 + groundDecorRng() * 0.26 : 0.065;
+    const petalColor = new THREE.Color(flowerColors[i % flowerColors.length]);
+    if (tall) {
+      decorDummy.position.set(x, bloomHeight / 2, z);
+      decorDummy.scale.set(1, bloomHeight, 1);
+      decorDummy.updateMatrix();
+      flowerStems.setMatrixAt(flowerStems.count, decorDummy.matrix);
+      flowerStems.count++;
+    }
+    for (let petal = 0; petal < 5; petal++) {
+      const petalAngle = (petal / 5) * Math.PI * 2;
+      decorDummy.position.set(x + Math.cos(petalAngle) * 0.035, bloomHeight, z + Math.sin(petalAngle) * 0.035);
+      decorDummy.rotation.set(-Math.PI / 2, 0, 0);
+      decorDummy.scale.setScalar(tall ? 1.25 : 1);
+      decorDummy.updateMatrix();
+      const index = i * 5 + petal;
+      flowerPetals.setMatrixAt(index, decorDummy.matrix);
+      flowerPetals.setColorAt(index, petalColor);
+    }
+    decorDummy.position.set(x, bloomHeight + 0.01, z);
+    decorDummy.scale.setScalar(1);
+    decorDummy.updateMatrix();
+    flowerCenters.setMatrixAt(i, decorDummy.matrix);
+  }
+  flowerPetals.instanceMatrix.needsUpdate = true;
+  if (flowerPetals.instanceColor) flowerPetals.instanceColor.needsUpdate = true;
+  flowerCenters.instanceMatrix.needsUpdate = true;
+  flowerStems.instanceMatrix.needsUpdate = true;
+}
+
 function applyTheme() {
   const dark = matchMedia('(prefers-color-scheme: dark)').matches;
   const season = SEASONS[state.season];
@@ -323,7 +464,9 @@ function applyTheme() {
   stage.style.setProperty('--stage-sky-top', skyTop);
   stage.style.setProperty('--stage-sky-bottom', skyBottom);
   stage.style.setProperty('--stage-sun', season.sun);
+  stage.dataset.season = state.season;
   groundMat.color.set(dark ? season.darkGround : season.ground);
+  updateSeasonalGround(state.season);
 }
 applyTheme();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
@@ -450,6 +593,8 @@ const FALLING_LEAF_COUNT = 36;
 let treeGroup = null, barkMesh = null, leafMesh = null, fallingLeaves = null;
 let leafJitter = null, leafActivityLevels = null, leafTotal = 0, drifting = [], treeTop = 4;
 let reveal = null;
+let cameraFit = null;
+let cameraFitDistance = 0;
 
 function disposeTree() {
   if (!treeGroup) return;
@@ -520,6 +665,7 @@ function rebuild({ refit = false, animate = false, fromCalendar = false } = {}) 
   const P = SPECIES[state.species];
   const seed = hashStr((state.user || 'sample') + ':' + state.species);
   const gen = generate(state.count, P, seed);
+  cameraFit = gen;
   const calendarTimeline = state.calendarDays.length ? buildGrowthTimeline() : null;
   const timeline = fromCalendar ? calendarTimeline : null;
   const activityDays = calendarTimeline ? calendarTimeline.days : state.calendarDays;
@@ -629,13 +775,15 @@ function rebuild({ refit = false, animate = false, fromCalendar = false } = {}) 
   updateReadout();
 }
 
-function fitCamera(gen) {
+function fitCamera(gen, preserveZoom = false) {
   controls.target.set(0, gen.top * 0.5, 0);
   const dir = camera.position.clone().sub(controls.target);
   if (dir.lengthSq() < 1e-6) dir.set(0.7, 0.3, 0.9);
-  const portrait = camera.aspect < 1 ? 1.5 : 1;
-  const dist = Math.max(gen.top * 1.7, gen.reach * 2.9, 5) * portrait;
-  dir.setLength(dist);
+  const zoom = preserveZoom && cameraFitDistance > 0 ? dir.length() / cameraFitDistance : 1;
+  const horizontalFov = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect);
+  const dist = Math.max(gen.top * 1.7, gen.reach * 2.9, gen.reach * 1.1 / Math.tan(horizontalFov / 2), 5);
+  cameraFitDistance = dist;
+  dir.setLength(dist * zoom);
   camera.position.copy(controls.target).add(dir);
   controls.minDistance = dist * 0.35;
   controls.maxDistance = dist * 2.2;
@@ -645,10 +793,15 @@ function resize() {
   const w = stage.clientWidth, h = stage.clientHeight;
   if (!w || !h) return;
   renderer.setSize(w, h, false);
+  const wasPortrait = camera.aspect < 1;
   camera.aspect = w / h;
+  const isPortrait = camera.aspect < 1;
+  if (wasPortrait !== isPortrait && cameraFit) fitCamera(cameraFit, true);
   camera.updateProjectionMatrix();
 }
-new ResizeObserver(resize).observe(stage);
+new ResizeObserver(() => {
+  if (!sidebarTransitioning) resize();
+}).observe(stage);
 resize();
 
 let last = performance.now();
@@ -722,9 +875,10 @@ function tick(now) {
   if (!reduceMotion) {
     for (let i = 0; i < grassBlades.length; i++) {
       const blade = grassBlades[i];
+      const scale = state.season === 'winter' ? 0.42 : state.season === 'fall' ? 0.8 : 1;
       grassDummy.position.set(blade.x, 0.015, blade.z);
       grassDummy.rotation.set(0, blade.yaw, Math.sin(now * 0.0015 + blade.phase) * 0.12);
-      grassDummy.scale.set(blade.width, blade.height, blade.width);
+      grassDummy.scale.set(blade.width * scale, blade.height * scale, blade.width * scale);
       grassDummy.updateMatrix();
       grassMesh.setMatrixAt(i, grassDummy.matrix);
     }
