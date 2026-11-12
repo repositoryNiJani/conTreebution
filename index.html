@@ -45,7 +45,7 @@
         <span class="spring-butterfly butterfly-four"><i></i><i></i></span>
       </div>
       <canvas id="c" role="img" aria-label="3D tree. Drag to rotate, scroll to zoom."></canvas>
-      <button class="embed-calendar-toggle" id="embedCalendarToggle" type="button" aria-label="Show contribution calendar" title="Show contribution calendar" aria-controls="treeCalendar" aria-expanded="false" disabled>
+      <button class="calendar-stage-toggle" id="stageCalendarToggle" type="button" aria-label="Show contribution calendar" title="Show contribution calendar" aria-controls="treeCalendar" aria-expanded="false" disabled>
         <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="14" rx="2"></rect><path d="M6 2v3M14 2v3M3 7h14M6 10h.01M10 10h.01M14 10h.01M6 13h.01M10 13h.01M14 13h.01"></path></svg>
       </button>
       <div class="xp-flow" id="xpFlow" aria-hidden="true" hidden>
@@ -60,7 +60,7 @@
       </div>
       <div class="hud">
         <div class="count"><strong id="hudCount">0</strong><span id="hudSub">contributions</span></div>
-        <div class="hint">Drag to rotate &middot; scroll to zoom</div>
+        <!-- <div class="hint">Drag to rotate &middot; scroll to zoom</div> -->
       </div>
       <div class="tree-calendar" id="treeCalendar" aria-label="Contribution calendar on tree view" aria-hidden="true" hidden>
         <div class="tree-calendar-heading"><strong>Contribution calendar</strong><span class="calendar-summary" id="treeCalendarSummary"></span></div>
@@ -109,12 +109,6 @@
       </form>
 
       <section class="group">
-        <h2>Season</h2>
-        <p class="group-help">Change the sky and ground; your tree colors stay the same.</p>
-        <div class="seasons" id="seasons" role="group" aria-label="Choose a season"></div>
-      </section>
-
-      <section class="group">
         <h2>Tree type</h2>
         <div class="chips" id="chips"></div>
       </section>
@@ -133,6 +127,12 @@
           <div class="swatches grow" id="swatches"></div>
         </div>
         <button type="button" id="resetLeaf">Use natural leaf color</button>
+      </section>
+
+       <section class="group">
+        <h2>Season</h2>
+        <p class="group-help">Change the sky and ground; your tree colors stay the same.</p>
+        <div class="seasons" id="seasons" role="group" aria-label="Choose a season"></div>
       </section>
 
       <section class="group">

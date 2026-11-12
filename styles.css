@@ -1,3 +1,14 @@
+@property --stage-sky-top {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #dcebe2;
+}
+@property --stage-sky-bottom {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #f3f0e4;
+}
+
 :root {
     --bg: #eef1ec;
     --panel: #fbfcf9;
@@ -121,8 +132,9 @@
     overflow: hidden;
     background: linear-gradient(180deg, var(--stage-sky-top, var(--sky-top)), var(--stage-sky-bottom, var(--sky-bottom)));
     border: 1px solid var(--line);
+    transition: --stage-sky-top 750ms ease, --stage-sky-bottom 750ms ease;
   }
-  .stage::before { content: ""; position: absolute; top: 13%; right: 14%; width: clamp(72px, 11vw, 132px); aspect-ratio: 1; border-radius: 50%; background: var(--stage-sun, #fff2d6); box-shadow: 0 0 0 14px color-mix(in srgb, var(--stage-sun, #fff2d6) 18%, transparent), 0 0 48px 20px color-mix(in srgb, var(--stage-sun, #fff2d6) 24%, transparent); opacity: 0.8; pointer-events: none; }
+  .stage::before { content: ""; position: absolute; top: 13%; right: 14%; width: clamp(72px, 11vw, 132px); aspect-ratio: 1; border-radius: 50%; background: var(--stage-sun, #fff2d6); box-shadow: 0 0 0 14px color-mix(in srgb, var(--stage-sun, #fff2d6) 18%, transparent), 0 0 48px 20px color-mix(in srgb, var(--stage-sun, #fff2d6) 24%, transparent); opacity: 0.8; pointer-events: none; transition: background-color 750ms ease, box-shadow 750ms ease; }
   .seasonal-clouds { position: absolute; z-index: 0; inset: 0; overflow: hidden; opacity: 0; pointer-events: none; transition: opacity 500ms ease; }
   .stage[data-season="summer"] .seasonal-clouds { opacity: 1; }
   .seasonal-cloud { position: absolute; left: -22%; width: 110px; height: 32px; border-radius: 999px; background: #fffdf1c9; filter: drop-shadow(0 5px 8px #586f7220); animation: summer-cloud-drift 52s linear infinite; }
@@ -172,8 +184,13 @@
     transition: none;
   }
   .stage-resize-mark { width: 64px; height: 64px; }
-  .embed-calendar-toggle { display: none; }
+  .calendar-stage-toggle { position: absolute; z-index: 4; top: 12px; right: 12px; display: grid; width: 40px; min-height: 40px; padding: 9px; place-items: center; border-color: color-mix(in srgb, var(--line) 75%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--panel) 88%, transparent); color: var(--ink); box-shadow: 0 4px 16px #14271d20; backdrop-filter: blur(8px); }
+  .calendar-stage-toggle:hover:not(:disabled) { border-color: var(--leaf-accent); color: var(--leaf-accent); }
+  .calendar-stage-toggle:disabled { cursor: not-allowed; opacity: 0.55; }
+  .calendar-stage-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .calendar-stage-toggle[aria-expanded="true"] { border-color: var(--leaf-accent); background: color-mix(in srgb, var(--leaf-accent) 12%, var(--panel)); color: var(--leaf-accent); }
   .hud { position: absolute; z-index: 2; left: 16px; top: 14px; right: 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; pointer-events: none; }
+  .stage .hud { right: 64px; }
   .count strong { display: block; font: 700 40px/1 var(--font-display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
   .count span { color: var(--muted); font-size: 13px; }
   .hint { color: var(--muted); font-size: 12px; text-align: right; }
@@ -314,11 +331,6 @@
   .embed .app { padding: 0; gap: 0; }
   .embed .intro-pending .app { opacity: 1; transform: none; pointer-events: auto; }
   .embed .top, .embed .panel, .embed .hint { display: none; }
-  .embed .embed-calendar-toggle { position: absolute; z-index: 4; top: 12px; right: 12px; display: grid; width: 40px; min-height: 40px; padding: 9px; place-items: center; border-color: color-mix(in srgb, var(--line) 75%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--panel) 88%, transparent); color: var(--ink); box-shadow: 0 4px 16px #14271d20; backdrop-filter: blur(8px); }
-  .embed .embed-calendar-toggle:hover:not(:disabled) { border-color: var(--leaf-accent); color: var(--leaf-accent); }
-  .embed .embed-calendar-toggle:disabled { cursor: not-allowed; opacity: 0.55; }
-  .embed .embed-calendar-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .embed .embed-calendar-toggle[aria-expanded="true"] { border-color: var(--leaf-accent); background: color-mix(in srgb, var(--leaf-accent) 12%, var(--panel)); color: var(--leaf-accent); }
   .embed .tree-calendar:not([hidden]) { display: flex; }
   .embed .tree-calendar[hidden] { display: none; }
   .app.embed-calendar-open .tree-calendar:not([hidden]) { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
@@ -543,4 +555,7 @@
     .count { display: flex; width: max-content; max-width: 100%; align-items: baseline; gap: 7px; padding: 9px 12px; border-radius: 15px; }
     .count strong { display: inline; font-size: 34px; }
     .count span { max-width: min(52vw, 220px); overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stage, .stage::before { transition-duration: 0s; }
   }

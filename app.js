@@ -189,6 +189,7 @@ grassMesh.frustumCulled = false;
 grassMesh.castShadow = false;
 grassMesh.receiveShadow = false;
 const grassBlades = [];
+const grassBladeScales = new Float32Array(GRASS_COUNT);
 const grassRng = mulberry32(0x51a55);
 const grassDummy = new THREE.Object3D();
 const grassColor = new THREE.Color();
@@ -375,7 +376,13 @@ flowerStems.count = 0;
 scene.add(flowerStems);
 const decorDummy = new THREE.Object3D();
 
-function updateSeasonalGround(seasonKey) {
+const seasonalGroundColors = Array.from({ length: GRASS_COUNT }, () => new THREE.Color());
+const seasonalGroundScales = new Float32Array(GRASS_COUNT);
+const seasonalGroundColor = new THREE.Color();
+let seasonalGroundTransition = null;
+let themeApplied = false;
+
+function updateSeasonalGround(seasonKey, groundColor, animate) {
   const groundDecorRng = mulberry32(0x5ea50a);
   const palettes = {
     spring: { grass: ['#78a85d', '#8dbb69', '#a8c978'], grassCount: 175 },
@@ -385,20 +392,38 @@ function updateSeasonalGround(seasonKey) {
   };
   const palette = palettes[seasonKey];
   const fallColors = ['#d87532', '#c64b2d', '#e3ad3d', '#a9482c'];
-  grassMesh.count = palette.grassCount;
+  const scale = seasonKey === 'winter' ? 0.42 : seasonKey === 'fall' ? 0.8 : 1;
+  const sourceColors = [];
+  const sourceScales = Float32Array.from(grassBladeScales);
   for (let i = 0; i < grassBlades.length; i++) {
-    const blade = grassBlades[i];
-    const scale = seasonKey === 'winter' ? 0.42 : seasonKey === 'fall' ? 0.8 : 1;
-    decorDummy.position.set(blade.x, 0.015, blade.z);
-    decorDummy.rotation.set(0, blade.yaw, 0);
-    decorDummy.scale.set(blade.width * scale, blade.height * scale, blade.width * scale);
-    decorDummy.updateMatrix();
-    grassMesh.setMatrixAt(i, decorDummy.matrix);
+    grassMesh.getColorAt(i, seasonalGroundColor);
+    sourceColors.push(seasonalGroundColor.clone());
     grassColor.set(palette.grass[Math.floor(groundDecorRng() * palette.grass.length)]);
-    grassMesh.setColorAt(i, grassColor);
+    seasonalGroundColors[i].copy(grassColor);
+    seasonalGroundScales[i] = i < palette.grassCount ? scale : 0;
+    if (!animate) {
+      grassBladeScales[i] = seasonalGroundScales[i];
+      grassMesh.setColorAt(i, seasonalGroundColors[i]);
+    }
   }
-  grassMesh.instanceMatrix.needsUpdate = true;
-  if (grassMesh.instanceColor) grassMesh.instanceColor.needsUpdate = true;
+  const targetGroundColor = new THREE.Color(groundColor);
+  if (animate) {
+    seasonalGroundTransition = {
+      start: performance.now(),
+      sourceGroundColor: groundMat.color.clone(),
+      targetGroundColor,
+      sourceColors,
+      sourceScales,
+      duration: 750
+    };
+  } else {
+    groundMat.color.copy(targetGroundColor);
+    seasonalGroundTransition = null;
+  }
+  grassMesh.count = GRASS_COUNT;
+  if (!animate) {
+    updateSeasonalGroundTransition(1);
+  }
 
   groundLeaves.count = seasonKey === 'fall' ? 220 : 0;
   for (let i = 0; i < groundLeaves.count; i++) {
@@ -456,6 +481,27 @@ function updateSeasonalGround(seasonKey) {
   flowerStems.instanceMatrix.needsUpdate = true;
 }
 
+function updateSeasonalGroundTransition(progress) {
+  const transition = seasonalGroundTransition;
+  const eased = progress * progress * (3 - 2 * progress);
+  if (transition) groundMat.color.lerpColors(transition.sourceGroundColor, transition.targetGroundColor, eased);
+  for (let i = 0; i < grassBlades.length; i++) {
+    if (transition) {
+      grassColor.lerpColors(transition.sourceColors[i], seasonalGroundColors[i], eased);
+      grassMesh.setColorAt(i, grassColor);
+      grassBladeScales[i] = lerp(transition.sourceScales[i], seasonalGroundScales[i], eased);
+    }
+    const blade = grassBlades[i];
+    decorDummy.position.set(blade.x, 0.015, blade.z);
+    decorDummy.rotation.set(0, blade.yaw, 0);
+    decorDummy.scale.set(blade.width * grassBladeScales[i], blade.height * grassBladeScales[i], blade.width * grassBladeScales[i]);
+    decorDummy.updateMatrix();
+    grassMesh.setMatrixAt(i, decorDummy.matrix);
+  }
+  grassMesh.instanceMatrix.needsUpdate = true;
+  if (grassMesh.instanceColor) grassMesh.instanceColor.needsUpdate = true;
+}
+
 function applyTheme() {
   const dark = matchMedia('(prefers-color-scheme: dark)').matches;
   const season = SEASONS[state.season];
@@ -465,8 +511,8 @@ function applyTheme() {
   stage.style.setProperty('--stage-sky-bottom', skyBottom);
   stage.style.setProperty('--stage-sun', season.sun);
   stage.dataset.season = state.season;
-  groundMat.color.set(dark ? season.darkGround : season.ground);
-  updateSeasonalGround(state.season);
+  updateSeasonalGround(state.season, dark ? season.darkGround : season.ground, themeApplied && !reduceMotion);
+  themeApplied = true;
 }
 applyTheme();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
@@ -809,6 +855,12 @@ function tick(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
 
+  if (seasonalGroundTransition) {
+    const progress = clamp((now - seasonalGroundTransition.start) / seasonalGroundTransition.duration, 0, 1);
+    updateSeasonalGroundTransition(progress);
+    if (progress === 1) seasonalGroundTransition = null;
+  }
+
   if (reveal && treeGroup) {
     const p = clamp((now - reveal.t0) / reveal.dur, 0, 1);
     let progress = p;
@@ -875,10 +927,9 @@ function tick(now) {
   if (!reduceMotion) {
     for (let i = 0; i < grassBlades.length; i++) {
       const blade = grassBlades[i];
-      const scale = state.season === 'winter' ? 0.42 : state.season === 'fall' ? 0.8 : 1;
       grassDummy.position.set(blade.x, 0.015, blade.z);
       grassDummy.rotation.set(0, blade.yaw, Math.sin(now * 0.0015 + blade.phase) * 0.12);
-      grassDummy.scale.set(blade.width * scale, blade.height * scale, blade.width * scale);
+      grassDummy.scale.set(blade.width * grassBladeScales[i], blade.height * grassBladeScales[i], blade.width * grassBladeScales[i]);
       grassDummy.updateMatrix();
       grassMesh.setMatrixAt(i, grassDummy.matrix);
     }
@@ -1000,7 +1051,7 @@ const els = {
   hudCount: $('#hudCount'), hudSub: $('#hudSub'), stageName: $('#stageName'), leaves: $('#leavesLabel'), bar: $('#barFill'),
   pRange: $('#previewRange'), pNum: $('#previewNum'), previewHint: $('#previewHint'),
   rotate: $('#rotate'), falling: $('#falling'), generateQr: $('#generateQr'),
-  embedCalendarToggle: $('#embedCalendarToggle'),
+  stageCalendarToggle: $('#stageCalendarToggle'),
   fallingHint: $('#fallingHint'),
   qrPreview: $('#qrPreview'), downloadQr: $('#downloadQr'), qrStatus: $('#qrStatus'),
   motionNote: $('#motionNote'),
@@ -1118,18 +1169,19 @@ function updateCalendarPalette() {
 
 function updateCalendarControls() {
   const hasCalendar = state.user && state.calendarDays.length > 0;
-  const showTreeCalendar = Boolean(hasCalendar && (EMBED ? state.embedCalendarOpen : state.calendarOpen));
+  const stageCalendarOpen = EMBED ? state.embedCalendarOpen : state.calendarOpen;
+  const showTreeCalendar = Boolean(hasCalendar && stageCalendarOpen);
   els.calendarToggle.disabled = !hasCalendar;
-  els.embedCalendarToggle.disabled = !hasCalendar;
+  els.stageCalendarToggle.disabled = !hasCalendar;
   els.calendarToggle.setAttribute('aria-expanded', String(showTreeCalendar));
-  els.embedCalendarToggle.setAttribute('aria-expanded', String(showTreeCalendar));
-  els.calendarToggleLabel.textContent = (EMBED ? state.embedCalendarOpen : state.calendarOpen)
+  els.stageCalendarToggle.setAttribute('aria-expanded', String(showTreeCalendar));
+  els.calendarToggleLabel.textContent = stageCalendarOpen
     ? 'Hide contribution calendar'
     : 'Show contribution calendar';
-  const embedCalendarLabel = state.embedCalendarOpen ? 'Hide contribution calendar' : 'Show contribution calendar';
-  els.embedCalendarToggle.setAttribute('aria-label', embedCalendarLabel);
-  els.embedCalendarToggle.title = hasCalendar
-    ? embedCalendarLabel
+  const stageCalendarLabel = stageCalendarOpen ? 'Hide contribution calendar' : 'Show contribution calendar';
+  els.stageCalendarToggle.setAttribute('aria-label', stageCalendarLabel);
+  els.stageCalendarToggle.title = hasCalendar
+    ? stageCalendarLabel
     : 'Load a GitHub profile with contribution calendar data to view it';
   els.calendarPanel.hidden = !showTreeCalendar;
   clearTimeout(treeCalendarHideTimer);
@@ -1302,8 +1354,12 @@ els.calendarToggle.addEventListener('click', () => {
   state.calendarOpen = !state.calendarOpen;
   updateCalendarControls();
 });
-els.embedCalendarToggle.addEventListener('click', () => {
-  state.embedCalendarOpen = !state.embedCalendarOpen;
+els.stageCalendarToggle.addEventListener('click', () => {
+  if (EMBED) {
+    state.embedCalendarOpen = !state.embedCalendarOpen;
+  } else {
+    state.calendarOpen = !state.calendarOpen;
+  }
   updateCalendarControls();
 });
 
