@@ -638,6 +638,8 @@ function branchGeometry(segs) {
 const FALLING_LEAF_COUNT = 36;
 let treeGroup = null, barkMesh = null, leafMesh = null, fallingLeaves = null;
 let leafJitter = null, leafActivityLevels = null, leafTotal = 0, drifting = [], treeTop = 4;
+let leafColorTransition = null;
+let leafColorsInitialized = false;
 let reveal = null;
 let cameraFit = null;
 let cameraFitDistance = 0;
@@ -657,31 +659,71 @@ function disposeTree() {
   treeGroup = barkMesh = leafMesh = fallingLeaves = null;
   drifting = [];
   leafActivityLevels = null;
+  leafColorTransition = null;
+  leafColorsInitialized = false;
   reveal = null;
 }
 
 function recolor() {
   const hex = leafHex();
   const base = new THREE.Color(hex), c = new THREE.Color();
+  const transition = leafColorsInitialized && !reduceMotion
+    ? { start: performance.now(), duration: 650, leavesFrom: [], leavesTo: [], fallingFrom: [], fallingTo: [] }
+    : null;
   if (leafMesh) {
     const activityPalette = [0.18, 0.36, 0.56, 0.78, 1].map((amount) =>
       new THREE.Color('#ffffff').lerp(base, amount)
     );
     for (let i = 0; i < leafTotal; i++) {
+      if (transition) {
+        leafMesh.getColorAt(i, c);
+        transition.leavesFrom.push(c.clone());
+      }
       if (leafActivityLevels) c.copy(activityPalette[leafActivityLevels[i]]);
       else c.copy(base);
       c.offsetHSL(leafJitter[i * 3], leafJitter[i * 3 + 1], leafJitter[i * 3 + 2]);
-      leafMesh.setColorAt(i, c);
+      if (transition) transition.leavesTo.push(c.clone());
+      else leafMesh.setColorAt(i, c);
     }
-    leafMesh.instanceColor.needsUpdate = true;
+    if (!transition) leafMesh.instanceColor.needsUpdate = true;
   }
   if (fallingLeaves) {
     for (let i = 0; i < drifting.length; i++) {
+      if (transition) {
+        fallingLeaves.getColorAt(i, c);
+        transition.fallingFrom.push(c.clone());
+      }
       c.copy(base).offsetHSL((Math.random() - 0.5) * 0.035, 0.02, (Math.random() - 0.5) * 0.12);
-      fallingLeaves.setColorAt(i, c);
+      if (transition) transition.fallingTo.push(c.clone());
+      else fallingLeaves.setColorAt(i, c);
+    }
+    if (!transition) fallingLeaves.instanceColor.needsUpdate = true;
+  }
+  leafColorTransition = transition;
+  leafColorsInitialized = true;
+}
+
+function updateLeafColorTransition(now) {
+  if (!leafColorTransition) return;
+  const transition = leafColorTransition;
+  const progress = clamp((now - transition.start) / transition.duration, 0, 1);
+  const eased = progress * progress * (3 - 2 * progress);
+  const color = new THREE.Color();
+  if (leafMesh && leafMesh.instanceColor) {
+    for (let i = 0; i < transition.leavesTo.length; i++) {
+      color.lerpColors(transition.leavesFrom[i], transition.leavesTo[i], eased);
+      leafMesh.setColorAt(i, color);
+    }
+    leafMesh.instanceColor.needsUpdate = true;
+  }
+  if (fallingLeaves && fallingLeaves.instanceColor) {
+    for (let i = 0; i < transition.fallingTo.length; i++) {
+      color.lerpColors(transition.fallingFrom[i], transition.fallingTo[i], eased);
+      fallingLeaves.setColorAt(i, color);
     }
     fallingLeaves.instanceColor.needsUpdate = true;
   }
+  if (progress === 1) leafColorTransition = null;
 }
 
 function spawnLeaf(leaf, randomHeight) {
@@ -854,6 +896,8 @@ let last = performance.now();
 function tick(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
+
+  updateLeafColorTransition(now);
 
   if (seasonalGroundTransition) {
     const progress = clamp((now - seasonalGroundTransition.start) / seasonalGroundTransition.duration, 0, 1);

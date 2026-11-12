@@ -213,6 +213,11 @@
   .group { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
   .group h2 { margin: 0; font: 600 12px/1 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
   .group-help { margin: -4px 0 0; color: var(--muted); font-size: 13px; }
+  .support-project { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .support-project .group-help { margin: 0; }
+  .support-star { display: grid; width: 40px; height: 40px; flex: none; place-items: center; border: 1px solid var(--leaf-accent); border-radius: 12px; background: var(--leaf-accent); color: var(--leaf-accent-ink); text-decoration: none; transition: filter 160ms ease, transform 160ms ease; }
+  .support-star:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .support-star svg { width: 20px; height: 20px; fill: currentColor; }
 
   label { font-size: 13px; color: var(--muted); }
   input[type="text"], input[type="number"], select {
