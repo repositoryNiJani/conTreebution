@@ -66,7 +66,7 @@
   }
   .intro-pending .welcome-screen { opacity: 1; visibility: visible; }
   .welcome-mark { width: 92px; height: 92px; margin-bottom: 8px; animation: welcome-grow 1.5s cubic-bezier(.2,.8,.2,1) both; }
-  .welcome-mark svg { width: 100%; height: 100%; overflow: visible; }
+  .welcome-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
   .welcome-trunk { stroke: var(--leaf-accent); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
   .welcome-leaf { fill: color-mix(in srgb, var(--leaf-accent) 22%, var(--panel)); stroke: var(--leaf-accent); stroke-width: 2; stroke-linejoin: round; }
   .welcome-eyebrow { margin: 0; color: var(--muted); font: 600 12px/1 var(--font-body); letter-spacing: .2em; animation: welcome-copy 700ms 250ms both; }
@@ -99,7 +99,7 @@
   .top { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   .top-copy { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
   .top h1 { display: inline-flex; align-items: center; gap: 7px; margin: 0; font: 700 22px/1.2 var(--font-display); letter-spacing: -0.01em; color: var(--leaf-accent); }
-  .brand-logo { width: 25px; height: 25px; flex: none; }
+  .brand-logo { width: 25px; height: 25px; flex: none; object-fit: contain; display: block; }
   .top p { margin: 0; color: var(--muted); }
   .sidebar-toggle { flex: none; display: grid; width: 44px; height: 44px; min-height: 44px; padding: 8px; place-items: center; border-radius: 12px; }
   .sidebar-toggle:hover { border-color: var(--leaf-accent); color: var(--leaf-accent); }
